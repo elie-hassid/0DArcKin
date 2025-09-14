@@ -4,7 +4,7 @@ import scipy.constants as consts
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq
 import matplotlib.pyplot as plt
-from movements import *
+import movements
 import time
 
 class TransportInterpolator:
@@ -109,7 +109,7 @@ class Simulator:
         # Update n_e
         mu_e, delta_nu = self.interpolate_params(E_converged)
         n_e_converged = max(n_e_prev / (1 - delta_nu * dt), 1e6)
-        return E_converged, n_e_converged
+        return E_converged, n_e_converged, mu_e
     
     def run(self):
         """Run the simulation."""
@@ -120,14 +120,10 @@ class Simulator:
 
             n_e_prev = self.densities["e"]
 
-            E_converged, n_e_converged = self.solve(self.E_min, self.E_max, n_e_prev, 1e-11) # Reduce or increase this value depending on the convergence speed.
+            E_converged, n_e_converged, mu_e = self.solve(self.E_min, self.E_max, n_e_prev, 1e-11) # Reduce or increase this value depending on the convergence speed.
             E_N = E_converged / (self.n_0 * Simulator.TOWNSEND)
-
             self.densities["e"] = n_e_converged
-            transport_params = self.transport_interpolator.get_parameters(E_N)
-            mu_e = transport_params["A2_mobility_N"] / self.n_0
             conductivity = max(n_e_converged * mu_e * consts.elementary_charge, 1e-20)
-
             I = conductivity * E_converged * self.arc_section
 
             # Saving
@@ -230,9 +226,9 @@ if __name__ == "__main__":
     Z_source = 1000.0
     t_start = 0.0
     t_end = 1
-    steps = 10000
+    steps = 100000
 
-    simulator = Simulator(V_source, Z_source, file_path, t_start, t_end, steps, linear_motion)
+    simulator = Simulator(V_source, Z_source, file_path, t_start, t_end, steps, movements.linear_motion)
     tic = time.perf_counter()
     simulator.run()
     toc = time.perf_counter()
