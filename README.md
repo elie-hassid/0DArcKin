@@ -1,6 +1,6 @@
 # Arc Discharge Simulator
 
-This Python project simulates the time evolution of a cylindrical arc discharge using measured transport parameters and calculates key plasma properties, including current, voltage, power, electron density, reduced electric field, and Specific Energy Input (SEI). It also provides visualization of the simulation results.
+This Python project simulates the time evolution of a cylindrical arc discharge using interpolated transport parameters from BOLSIG+ and calculates key plasma properties, including current, voltage, power, electron density, reduced electric field, and Specific Energy Input (SEI). It also provides visualization of the simulation results.
 
 ---
 
@@ -40,7 +40,7 @@ pip install numpy pandas scipy matplotlib
 ## Usage
 
 1. **Prepare transport data**  
-   Provide a CSV file (`transport_params.csv`) with transport parameters. The CSV should have columns including `E/N_Td`, mobility, ionization frequency, and attachment frequency.
+   Provide a CSV file (`transport_params.csv`) with transport parameters. The CSV should have columns including `E/N_Td`, mobility, ionization frequency, and attachment frequency (compatible with default BOLSIG+ export data).
 
 2. **Define arc movement**  
    Provide a function for arc length vs time, e.g.:
