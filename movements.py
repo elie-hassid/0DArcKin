@@ -38,6 +38,7 @@ Returns:
     float
         The position at time t in meters.
 """
+import numpy as np
 
 def linear_motion(t, total_time=1, total_distance=0.1):
     if t <= 0:
