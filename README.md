@@ -1,172 +1,115 @@
-# Documentation - Electron Transport and Arc Simulation
+# Arc Discharge Simulator
 
-This project implements a simulation of arc dynamics based on interpolated electron transport parameters from external data.  
-
-The simulation includes:
-- Interpolation of transport parameters as a function of reduced electric field \(E/N\).
-- Resolution of the arc balance equation using Brent’s method (`scipy.optimize.brentq`).
-- Time evolution of electron density, current, voltage, and power.
-- Several motion laws for arc length.
-- Visualization of results with `matplotlib`.
+This Python project simulates the time evolution of a cylindrical arc discharge using measured transport parameters and calculates key plasma properties, including current, voltage, power, electron density, reduced electric field, and Specific Energy Input (SEI). It also provides visualization of the simulation results.
 
 ---
 
-## Dependencies
+## Features
+
+- Interpolates transport parameters (mobility, ionization, attachment) from CSV data.
+- Solves for the electric field and electron density at each time step using `scipy.optimize.brentq`.
+- Computes arc current, voltage, power, arc length, reduced electric field, and electron density.
+- Calculates energy dissipated per reduced field bin and SEI.
+- Produces comprehensive plots with:
+  - Current & voltage on dual y-axis
+  - Power
+  - Arc length
+  - Reduced electric field
+  - Electron density
+  - Energy histogram with total energy and mean SEI labels
+
+---
+
+## Requirements
+
+- Python 3.8+
+- Packages:
+  - `numpy`
+  - `pandas`
+  - `scipy`
+  - `matplotlib`
+
+Install with:
 
 ```bash
-pip install numpy pandas matplotlib scipy
+pip install numpy pandas scipy matplotlib
 ```
 
 ---
 
-## Main Classes
+## Usage
 
-### `TransportInterpolator`
+1. **Prepare transport data**  
+   Provide a CSV file (`transport_params.csv`) with transport parameters. The CSV should have columns including `E/N_Td`, mobility, ionization frequency, and attachment frequency.
 
-Class for loading and interpolating transport parameters.
-
-#### Attributes
-- `transport_params` : DataFrame containing transport parameters.
-- `interpolators` : dictionary of log-log interpolation functions for each parameter.
-
-#### Methods
-- `__init__(file_path)`  
-  Loads a CSV file with transport parameters.
-  
-- `get_parameters(E_over_N)`  
-  Returns a dictionary of interpolated parameters for a given reduced electric field \(E/N\).
-
----
-
-### `Simulator`
-
-Class for time-domain simulation of an electric arc.
-
-#### Key Attributes
-- `densities` : dictionary of densities (initialized with electrons `e`).
-- `n_0` : reference density (function of temperature and pressure).
-- `arc_section` : arc cross-sectional area in m².
-- `time_grid` : non-linear (exponentially spaced) time grid.
-- Stored results:
-  - `electron_densities`
-  - `arc_conductivity`
-  - `arc_current`
-  - `arc_voltage`
-  - `reduced_fields`
-  - `arc_lengths`
-
-#### Methods
-- `__init__(V_source, Z_source, file_path, t_start, t_end, steps, arc_length_fun, alpha=5)`  
-  Initializes the simulation with source parameters, time span, and arc motion function.
-
-- `__iter__()`  
-  Allows the object to be used in a `for` loop.
-
-- `__next__()`  
-  Performs one simulation step, updates physical quantities, and stores results.
-
-- `residual(E, n_e_prev, dt)`  
-  Residual function for Brent’s solver.  
-
-- `solve(E_min, E_max, n_e_prev, dt)`  
-  Solves the electric field with Brent and updates the electron density.
-
----
-
-## Arc Motion Functions
-
-Several arc length laws are available (all return position in meters):
-
-- `linear_motion(t, total_time=1, total_distance=0.1)`  
-  Linear growth.
-  
-- `quadratic_motion(t, total_time=1, total_distance=0.1)`  
-  Quadratic growth.
-  
-- `log_motion(t, total_time=1, total_distance=0.1)`  
-  Logarithmic growth (fast at the beginning).
-  
-- `exp_motion(t, total_time=1, total_distance=0.1)`  
-  Exponential growth (slow then fast).
-  
-- `sinusoidal_motion(t, total_time=1, min_pos=0.001, max_pos=0.01)`  
-  Sinusoidal motion between two bounds.
-
----
-
-## How to Use
-
-1. Export transport data from BOLSIG+
-
- - Open BOLSIG+ and set up your gas mixture and conditions.
-
- - Export the tabulated electron transport parameters as a CSV file (transport_params.csv), ensuring it contains all necessary columns (e.g., mean energy, mobility, ionization frequencies, etc.).
-
-2. Initialize the Simulator
-
- - Import your desired arc motion function (linear_motion, quadratic_motion, etc.).
-
- - Create a Simulator instance using the source voltage, source impedance, CSV file path, time span, number of steps, and arc motion function.
-
-3. Run the Simulation
-
- - Use a for loop to iterate over the simulator object.
-
- - Extract time, reduced field, electron density, current, and voltage from the simulator.
-
-4. Visualize Results
-
- - Use the built-in plotting routines or customize your own to analyze current, voltage, power, reduced field, electron density, and energy distribution.
-
----
-
-## Example Usage
+2. **Define arc movement**  
+   Provide a function for arc length vs time, e.g.:
 
 ```python
-file_path = "transport_params.csv"
-V_source = 3000.0
-Z_source = 1000.0
-t_start, t_end, steps = 0.0, 2.0, 10000
-
-# Simulation with linear arc motion
-simulator = Simulator(V_source, Z_source, file_path, t_start, t_end, steps, linear_motion)
-
-for _ in simulator:
-    pass
-
-# Extract results
-time = simulator.time_grid[:len(simulator.arc_current)]
-E_over_N = np.array(simulator.reduced_fields)
-electron_density = np.array(simulator.electron_densities)
-arc_current = np.array(simulator.arc_current)
-arc_voltage = np.array(simulator.arc_voltage)
+def linear_motion(t):
+    return 0.01 + 0.005*t  # example: arc grows linearly
 ```
+
+3. **Run the simulation**  
+
+```python
+from simulator import Simulator
+import movements  # contains your arc_length function
+
+sim = Simulator(
+    V_source=3000.0,
+    Z_source=100.0,
+    file_path="transport_params.csv",
+    t_start=0.0,
+    t_end=1.0,
+    steps=10000,
+    arc_length_fun=movements.linear_motion
+)
+
+sim.run()
+sim.plot()
+```
+
+4. **Inspect results**  
+The simulation stores results in `sim.results`, a dictionary containing:
+
+```python
+sim.results.keys()
+# ['electron_densities', 'arc_conductivity', 'arc_current', 'arc_voltage', 'reduced_fields', 'arc_lengths']
+```
+Each array has length equal to the number of time steps.
 
 ---
 
-## Visualization
+## How It Works
 
-The script automatically generates a 2x3 grid of plots:
+1. **Transport interpolation**  
+   Log-log cubic interpolation of key parameters (mobility, ionization, attachment) is performed from the CSV data.
 
-1. **Arc Current**
-2. **Arc Voltage**
-3. **Dissipated Power**
-4. **Reduced Field (E/N)**
-5. **Electron Density**
-6. **Histogram of dissipated energy vs reduced field**
+2. **Time grid**  
+   An exponential time grid is generated to capture fast initial changes in the discharge.
+
+3. **Electric field solving**  
+   At each time step, `brentq` finds the electric field such that the simulated current matches the source voltage minus source impedance.
+
+4. **Electron density update**  
+   Electron density is updated iteratively using the difference between ionization and attachment frequencies.
+
+5. **Derived quantities**  
+   Current, voltage, power, arc length, reduced field, electron density, energy per bin, and SEI are computed and stored for plotting.
 
 ---
 
 ## Notes
-- The file `transport_params.csv` must contain the expected columns (transport parameters).  
-- The simulation automatically stops if the arc extinguishes (based on voltage and current criteria).  
-- The parameter `alpha` controls the time grid spacing (more or less concentrated at the beginning).  
+
+- The code currently assumes a cylindrical arc with fixed cross-section.
+- SEI (Specific Energy Input) is calculated in J/m³ and displayed in kJ/L in the plots.
+- The first time step is removed in plots for clarity.
+- Designed for readability and ease of modification rather than maximum performance.
 
 ---
 
-## Possible Improvements
-- Implement additional arc motion models.  
-- Add options to save results in CSV or HDF5 format.  
-- Enable comparison across different motion laws.  
+## License
 
----
+MIT License
+
