@@ -20,7 +20,10 @@ class TransportInterpolator:
         ]
 
         self.interpolators = {}
-        cols_to_interpolate = self.transport_params.columns[2:]
+
+        # To speed up the simulation, only interpolate mobility, ionization and attachment.
+        # Speeds up the simulation by a huge factor
+        cols_to_interpolate = self.transport_params.columns[[3, 9, 10]]
 
         for col in cols_to_interpolate:
             x = self.transport_params["E/N_Td"].values
@@ -98,7 +101,7 @@ class Simulator:
     def solve(self, E_min, E_max, n_e_prev, dt):
         """Determine the electric field E with brentq, then compute the corresponding electronic density n_e."""
         try:
-            E_converged = brentq(self.residual, E_min, E_max, args=(n_e_prev, dt), xtol=1e-7, rtol=1e-7, maxiter=1000)
+            E_converged = brentq(self.residual, E_min, E_max, args=(n_e_prev, dt), xtol=1e-9, rtol=1e-9, maxiter=1000)
         except ValueError:
             print("Brentq failed.")
             E_converged = E_min
@@ -134,9 +137,6 @@ class Simulator:
             self.arc_conductivity[i]   = conductivity
             self.arc_current[i]        = I
             self.arc_voltage[i]        = E_converged * self.arc_length
-
-            if i % 1000 == 0:
-                print(f"Time {t:.6e}s: U = {E_converged * self.arc_length:.3e} V, I = {I:.3e} A, n_e = {n_e_converged:.4e} m^-3")
 
     def axis_limits_stable(data, min_span=1e-2, margin=0.05):
         """Limit zooming in the case the variation is small."""
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     V_source = 3000.0
     Z_source = 1000.0
     t_start = 0.0
-    t_end = 2
+    t_end = 1
     steps = 10000
 
     simulator = Simulator(V_source, Z_source, file_path, t_start, t_end, steps, linear_motion)
